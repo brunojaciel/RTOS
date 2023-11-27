@@ -1,4 +1,4 @@
-# Install script for directory: D:/STR/M3/sample_project/main
+# Install script for directory: D:/STR/M3/STR_M3/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

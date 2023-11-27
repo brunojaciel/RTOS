@@ -5,18 +5,18 @@ cmake_minimum_required(VERSION 3.5)
 
 file(MAKE_DIRECTORY
   "C:/Espressif/frameworks/esp-idf-v5.0.2/components/bootloader/subproject"
-  "D:/STR/M3/sample_project/build/bootloader"
-  "D:/STR/M3/sample_project/build/bootloader-prefix"
-  "D:/STR/M3/sample_project/build/bootloader-prefix/tmp"
-  "D:/STR/M3/sample_project/build/bootloader-prefix/src/bootloader-stamp"
-  "D:/STR/M3/sample_project/build/bootloader-prefix/src"
-  "D:/STR/M3/sample_project/build/bootloader-prefix/src/bootloader-stamp"
+  "D:/STR/M3/STR_M3/build/bootloader"
+  "D:/STR/M3/STR_M3/build/bootloader-prefix"
+  "D:/STR/M3/STR_M3/build/bootloader-prefix/tmp"
+  "D:/STR/M3/STR_M3/build/bootloader-prefix/src/bootloader-stamp"
+  "D:/STR/M3/STR_M3/build/bootloader-prefix/src"
+  "D:/STR/M3/STR_M3/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "D:/STR/M3/sample_project/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "D:/STR/M3/STR_M3/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "D:/STR/M3/sample_project/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "D:/STR/M3/STR_M3/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

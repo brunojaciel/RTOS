@@ -13,6 +13,7 @@
 
             "compileCommands": "${workspaceFolder}/build/compile_commands.json",
 
+
             "browse": {
                 "path": [
                     "${config:idf.espIdfPath}/components",

@@ -1,8 +1,8 @@
 {
     "project_name":       "bootloader",
     "project_path":       "C:/Espressif/frameworks/esp-idf-v5.0.2/components/bootloader/subproject",
-    "build_dir":          "D:/STR/M3/sample_project/build/bootloader",
-    "config_file":        "D:/STR/M3/sample_project/sdkconfig",
+    "build_dir":          "D:/STR/M3/STR_M3/build/bootloader",
+    "config_file":        "D:/STR/M3/STR_M3/sdkconfig",
     "config_defaults":    "",
     "bootloader_elf":     "",
     "app_elf":            "bootloader.elf",
