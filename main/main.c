@@ -31,7 +31,7 @@ void read_sensor(int index){
 
 void execute_actuator(int index){
     xSemaphoreTake(mutex, portMAX_DELAY); // Take the mutex before accessing the global variable
-    car_system_actuator[index] = !car_system_actuator[index];
+    car_system_actuator[index] = true;
     xSemaphoreGive(mutex); // Give back the mutex after modifying the global variable
 }
 
@@ -54,6 +54,8 @@ static void tp_execute_task(void *pvParameter){
             if (s_pad_activated[i] == 1) {
                 read_sensor(i);
                 execute_actuator(i);
+            } else {
+                car_system_actuator[i] = 0;
             }
         }
 
