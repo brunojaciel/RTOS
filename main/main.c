@@ -35,14 +35,16 @@ void execute_actuator(int index){
     xSemaphoreGive(mutex); // Give back the mutex after modifying the global variable
 }
 
-void thread_display(void) {
-    printf("\033[2J\033[1;1H");
-    printf("\nENGINE: Actuator electronic injection: %d | Actuator internal temperature: %d\n", car_system_actuator[0], car_system_actuator[3]);
-    printf("BRAKE: ABS %d\n", car_system_actuator[4]);
-    printf("LSE: Airbag: %d | Seat belt: %d\n", car_system_actuator[5], car_system_actuator[6]);
-    printf("LVT: Front Headlight Light: %d | Power Window System: %d | Two Door Lock: %d\n", car_system_actuator[7], car_system_actuator[8], car_system_actuator[9]);
+void thread_display() {
+    //while(1){
+        printf("\033[2J\033[1;1H");
+        printf("\nENGINE: Actuator electronic injection: %d | Actuator internal temperature: %d\n", car_system_actuator[0], car_system_actuator[3]);
+        printf("BRAKE: ABS %d\n", car_system_actuator[4]);
+        printf("LSE: Airbag: %d | Seat belt: %d\n", car_system_actuator[5], car_system_actuator[6]);
+        printf("LVT: Front Headlight Light: %d | Power Window System: %d | Two Door Lock: %d\n", car_system_actuator[7], car_system_actuator[8], car_system_actuator[9]);
 
-    vTaskDelay(500/portTICK_PERIOD_MS);
+        vTaskDelay(500/portTICK_PERIOD_MS);
+    //}
 }
 
 static void tp_execute_task(void *pvParameter){
@@ -55,14 +57,27 @@ static void tp_execute_task(void *pvParameter){
                 read_sensor(i);
                 execute_actuator(i);
             } else {
+                xSemaphoreTake(mutex, portMAX_DELAY);
                 car_system_actuator[i] = 0;
+                xSemaphoreGive(mutex);
             }
         }
-
         thread_display();
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        vTaskDelay(500/portTICK_PERIOD_MS);
     }
 }
+
+void eletronic_injection(void *pvParameter){
+    while(1){
+        if(s_pad_activated[0] == 1){
+            read_sensor(0);
+            execute_actuator(0);
+        } else {
+            car_system_actuator[0] = 0;
+        }
+    }
+}
+
 
 static void tp_touch_pad_init(void)
 {
@@ -140,4 +155,5 @@ void app_main(void)
 
     // Start task to read values sensed by pads
     xTaskCreate(&tp_execute_task, "execute_task", 2048, NULL, 5, NULL);
+    //xTaskCreate(&thread_display, "display", 2048,  NULL, 5, NULL);
 }
