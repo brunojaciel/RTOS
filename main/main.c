@@ -8,7 +8,7 @@
 #include "esp_log.h"
 #include "freertos/semphr.h"
 
-#define TOUCH_THRESH_NO_USE   (0)
+#define TOUCH_THRESH_NO_USE (0)
 #define TOUCHPAD_FILTER_TOUCH_PERIOD (10)
 
 static const char *TAG = "Touch pad";
@@ -17,26 +17,30 @@ static bool s_pad_activated[TOUCH_PAD_MAX];
 static uint32_t s_pad_init_val[TOUCH_PAD_MAX];
 
 bool car_system_actuator[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//0: electronic injection | 3: internal temperature | 
-//4: ABS | 5: airbag | 6: seat belt | 
-//7: front headlight light | 8: power window system | 9: two door lock
+// 0: electronic injection | 3: internal temperature |
+// 4: ABS | 5: airbag | 6: seat belt |
+// 7: front headlight light | 8: power window system | 9: two door lock
 
 SemaphoreHandle_t mutex; // Declare a mutex handle
 
-void read_sensor(int index){
+void read_sensor(int index)
+{
     xSemaphoreTake(mutex, portMAX_DELAY); // Take the mutex before accessing the global variable
     s_pad_activated[index] = false;
     xSemaphoreGive(mutex); // Give back the mutex after modifying the global variable
 }
 
-void execute_actuator(int index){
+void execute_actuator(int index)
+{
     xSemaphoreTake(mutex, portMAX_DELAY); // Take the mutex before accessing the global variable
     car_system_actuator[index] = true;
     xSemaphoreGive(mutex); // Give back the mutex after modifying the global variable
 }
 
-static void thread_display(void *pvParameter) {
-    while(1){
+static void thread_display(void *pvParameter)
+{
+    while (1)
+    {
         xSemaphoreTake(mutex, portMAX_DELAY);
         printf("\033[2J\033[1;1H");
         printf("\nENGINE: Actuator electronic injection: %d | Actuator internal temperature: %d\n", car_system_actuator[0], car_system_actuator[3]);
@@ -45,47 +49,167 @@ static void thread_display(void *pvParameter) {
         printf("LVT: Front Headlight Light: %d | Power Window System: %d | Two Door Lock: %d\n", car_system_actuator[7], car_system_actuator[8], car_system_actuator[9]);
         xSemaphoreGive(mutex);
 
-        vTaskDelay(500/portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 
-static void tp_execute_task(void *pvParameter){
-    while(1)
+void eletronic_injection(void *pvParameter)
+{
+    while (1)
     {
-        for (int i = 0; i < 12; i++) {
-            if (s_pad_activated[i] == 1) {
-                //printf("aq");
-                read_sensor(i);
-                execute_actuator(i);
-            } else {
-                xSemaphoreTake(mutex, portMAX_DELAY);
-                car_system_actuator[i] = 0;
-                xSemaphoreGive(mutex);
-            }
-        }
-        //thread_display();
-        vTaskDelay(100/portTICK_PERIOD_MS);
-    }
-}
-
-void eletronic_injection(void *pvParameter){
-    while(1){
-        if(s_pad_activated[0] == 1){
+        if (s_pad_activated[0] == 1)
+        {
             read_sensor(0);
             execute_actuator(0);
-        } else {
+        }
+        else
+        {
             xSemaphoreTake(mutex, portMAX_DELAY);
             car_system_actuator[0] = 0;
             xSemaphoreGive(mutex);
         }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
-    vTaskDelay(100/portTICK_PERIOD_MS);
+}
+
+void internal_temperature(void *pvParameter)
+{
+    while (1)
+    {
+        if (s_pad_activated[3] == 1)
+        {
+            read_sensor(3);
+            execute_actuator(3);
+        }
+        else
+        {
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            car_system_actuator[3] = 0;
+            xSemaphoreGive(mutex);
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+}
+
+void abs_brake(void *pvParameter)
+{
+    while (1)
+    {
+        if (s_pad_activated[4] == 1)
+        {
+            read_sensor(4);
+            execute_actuator(4);
+        }
+        else
+        {
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            car_system_actuator[4] = 0;
+            xSemaphoreGive(mutex);
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+}
+
+void airbag(void *pvParameter)
+{
+    while (1)
+    {
+        if (s_pad_activated[5] == 1)
+        {
+            read_sensor(5);
+            execute_actuator(5);
+        }
+        else
+        {
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            car_system_actuator[5] = 0;
+            xSemaphoreGive(mutex);
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+}
+
+void seat_belt(void *pvParameter)
+{
+    while (1)
+    {
+        if (s_pad_activated[6] == 1)
+        {
+            read_sensor(6);
+            execute_actuator(6);
+        }
+        else
+        {
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            car_system_actuator[6] = 0;
+            xSemaphoreGive(mutex);
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+}
+
+void front_headlight_light(void *pvParameter)
+{
+    while (1)
+    {
+        if (s_pad_activated[7] == 1)
+        {
+            read_sensor(7);
+            execute_actuator(7);
+        }
+        else
+        {
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            car_system_actuator[7] = 0;
+            xSemaphoreGive(mutex);
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+}
+
+void power_window_system(void *pvParameter)
+{
+    while (1)
+    {
+        if (s_pad_activated[8] == 1)
+        {
+            read_sensor(8);
+            execute_actuator(8);
+        }
+        else
+        {
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            car_system_actuator[8] = 0;
+            xSemaphoreGive(mutex);
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+}
+
+void two_door_lock(void *pvParameter)
+{
+    while (1)
+    {
+        if (s_pad_activated[9] == 1)
+        {
+            read_sensor(9);
+            execute_actuator(9);
+        }
+        else
+        {
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            car_system_actuator[9] = 0;
+            xSemaphoreGive(mutex);
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
 }
 
 static void tp_touch_pad_init(void)
 {
-    for (int i = 0;i< TOUCH_PAD_MAX;i++) {
-        //init RTC IO and mode for touch pad.
+    for (int i = 0; i < TOUCH_PAD_MAX; i++)
+    {
+        // init RTC IO and mode for touch pad.
         touch_pad_config(i, TOUCH_THRESH_NO_USE);
     }
 }
@@ -102,14 +226,14 @@ static void tp_touch_pad_init(void)
 static void tp_example_set_thresholds(void)
 {
     uint16_t touch_value;
-    for (int i = 0; i < TOUCH_PAD_MAX; i++) {
-        //read filtered value
+    for (int i = 0; i < TOUCH_PAD_MAX; i++)
+    {
+        // read filtered value
         touch_pad_read_filtered(i, &touch_value);
         s_pad_init_val[i] = touch_value;
         ESP_LOGI(TAG, "test init: touch pad [%d] val is %d", i, touch_value);
-        //set interrupt threshold.
+        // set interrupt threshold.
         ESP_ERROR_CHECK(touch_pad_set_thresh(i, touch_value * 2 / 3));
-
     }
 }
 
@@ -120,10 +244,12 @@ static void tp_example_set_thresholds(void)
 static void tp_example_rtc_intr(void *arg)
 {
     uint32_t pad_intr = touch_pad_get_status();
-    //clear interrupt
+    // clear interrupt
     touch_pad_clear_status();
-    for (int i = 0; i < TOUCH_PAD_MAX; i++) {
-        if ((pad_intr >> i) & 0x01) {
+    for (int i = 0; i < TOUCH_PAD_MAX; i++)
+    {
+        if ((pad_intr >> i) & 0x01)
+        {
             s_pad_activated[i] = true;
         }
     }
@@ -131,13 +257,13 @@ static void tp_example_rtc_intr(void *arg)
 
 void app_main(void)
 {
-    //uint64_t eus, eus2;
+    // uint64_t eus, eus2;
 
-    //eus = esp_timer_get_time();
-    // Initialize touch pad peripheral, it will start a timer to run a filter
-    //ESP_LOGI(TAG, "Initializing touch pad");
-    // Initialize touch pad peripheral.
-    // The default fsm mode is software trigger mode.
+    // eus = esp_timer_get_time();
+    //  Initialize touch pad peripheral, it will start a timer to run a filter
+    // ESP_LOGI(TAG, "Initializing touch pad");
+    //  Initialize touch pad peripheral.
+    //  The default fsm mode is software trigger mode.
     touch_pad_init();
     // If use interrupt trigger mode, should set touch sensor FSM mode at 'TOUCH_FSM_MODE_TIMER'.
     touch_pad_set_fsm_mode(TOUCH_FSM_MODE_TIMER);
@@ -153,13 +279,21 @@ void app_main(void)
     tp_example_set_thresholds();
     // Register touch interrupt ISR
     touch_pad_isr_register(tp_example_rtc_intr, NULL);
-    //interrupt mode, enable touch interrupt
+    // interrupt mode, enable touch interrupt
     touch_pad_intr_enable();
     // Create a mutex
     mutex = xSemaphoreCreateMutex();
 
-    // Start task to read values sensed by pads
-    xTaskCreate(&tp_execute_task, "execute_task", 2048, NULL, 5, NULL);
-    xTaskCreate(&thread_display, "display_task", 2048,  NULL, 5, NULL);
-    //xTaskCreate(&eletronic_injection, "eletronic_injection_task", 2048, NULL, 5, NULL);
+    // Start tasks to print values sensed by pads
+    xTaskCreate(&thread_display, "display_task", 2048, NULL, 5, NULL);
+    
+    // Start tasks to read values sensed by pads
+    xTaskCreate(&airbag, "airbag_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&abs_brake, "abs_brake_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&seat_belt, "seat_belt_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&two_door_lock, "two_door_lock_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&eletronic_injection, "eletronic_injection_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&power_window_system, "power_window_system_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&internal_temperature, "internal_temperature_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&front_headlight_light, "front_headlight_light_task", 2048, NULL, 5, NULL);
 }
