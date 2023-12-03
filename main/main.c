@@ -36,6 +36,21 @@ void execute_actuator(int index)
     car_system_actuator[index] = true;
     xSemaphoreGive(mutex); // Give back the mutex after modifying the global variable
 }
+void colorful_print(const char *name, bool binary)
+{
+    printf("%s: ", name);
+
+    if (binary == 0)
+    {
+        printf("\033[31mDESATIVADO \033[0m"); // Vermelho para desativado
+    }
+    else
+    {
+        printf("\033[32mATIVADO \033[0m"); // Verde para ativado
+    }
+
+    printf("\n");
+}
 
 static void thread_display(void *pvParameter)
 {
@@ -43,10 +58,14 @@ static void thread_display(void *pvParameter)
     {
         xSemaphoreTake(mutex, portMAX_DELAY);
         printf("\033[2J\033[1;1H");
-        printf("\nENGINE: Actuator electronic injection: %d | Actuator internal temperature: %d\n", car_system_actuator[0], car_system_actuator[3]);
-        printf("BRAKE: ABS %d\n", car_system_actuator[4]);
-        printf("LSE: Airbag: %d | Seat belt: %d\n", car_system_actuator[5], car_system_actuator[6]);
-        printf("LVT: Front Headlight Light: %d | Power Window System: %d | Two Door Lock: %d\n", car_system_actuator[7], car_system_actuator[8], car_system_actuator[9]);
+        colorful_print("ENGINE: Actuator electronic injection:", car_system_actuator[0]);
+        colorful_print("Actuator internal temperature: ", car_system_actuator[3]);
+        colorful_print("BRAKE (ABS): ", car_system_actuator[4]);
+        colorful_print("Airbag: ", car_system_actuator[5]);
+        colorful_print("Seat belt: ",   car_system_actuator[6]);
+        colorful_print("Front Headlight Light: ", car_system_actuator[7]);
+        colorful_print("Power Window System: ", car_system_actuator[8]);
+        colorful_print("Two Door Lock: ", car_system_actuator[9]);
         xSemaphoreGive(mutex);
 
         vTaskDelay(500 / portTICK_PERIOD_MS);
