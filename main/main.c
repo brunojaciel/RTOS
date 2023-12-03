@@ -35,25 +35,26 @@ void execute_actuator(int index){
     xSemaphoreGive(mutex); // Give back the mutex after modifying the global variable
 }
 
-void thread_display() {
-    //while(1){
+static void thread_display(void *pvParameter) {
+    while(1){
+        xSemaphoreTake(mutex, portMAX_DELAY);
         printf("\033[2J\033[1;1H");
         printf("\nENGINE: Actuator electronic injection: %d | Actuator internal temperature: %d\n", car_system_actuator[0], car_system_actuator[3]);
         printf("BRAKE: ABS %d\n", car_system_actuator[4]);
         printf("LSE: Airbag: %d | Seat belt: %d\n", car_system_actuator[5], car_system_actuator[6]);
         printf("LVT: Front Headlight Light: %d | Power Window System: %d | Two Door Lock: %d\n", car_system_actuator[7], car_system_actuator[8], car_system_actuator[9]);
+        xSemaphoreGive(mutex);
 
         vTaskDelay(500/portTICK_PERIOD_MS);
-    //}
+    }
 }
 
 static void tp_execute_task(void *pvParameter){
     while(1)
     {
-        //interrupt mode, enable touch interrupt
-        touch_pad_intr_enable();
         for (int i = 0; i < 12; i++) {
             if (s_pad_activated[i] == 1) {
+                //printf("aq");
                 read_sensor(i);
                 execute_actuator(i);
             } else {
@@ -62,8 +63,8 @@ static void tp_execute_task(void *pvParameter){
                 xSemaphoreGive(mutex);
             }
         }
-        thread_display();
-        vTaskDelay(500/portTICK_PERIOD_MS);
+        //thread_display();
+        vTaskDelay(100/portTICK_PERIOD_MS);
     }
 }
 
@@ -73,11 +74,13 @@ void eletronic_injection(void *pvParameter){
             read_sensor(0);
             execute_actuator(0);
         } else {
+            xSemaphoreTake(mutex, portMAX_DELAY);
             car_system_actuator[0] = 0;
+            xSemaphoreGive(mutex);
         }
     }
+    vTaskDelay(100/portTICK_PERIOD_MS);
 }
-
 
 static void tp_touch_pad_init(void)
 {
@@ -150,10 +153,13 @@ void app_main(void)
     tp_example_set_thresholds();
     // Register touch interrupt ISR
     touch_pad_isr_register(tp_example_rtc_intr, NULL);
+    //interrupt mode, enable touch interrupt
+    touch_pad_intr_enable();
     // Create a mutex
     mutex = xSemaphoreCreateMutex();
 
     // Start task to read values sensed by pads
     xTaskCreate(&tp_execute_task, "execute_task", 2048, NULL, 5, NULL);
-    //xTaskCreate(&thread_display, "display", 2048,  NULL, 5, NULL);
+    xTaskCreate(&thread_display, "display_task", 2048,  NULL, 5, NULL);
+    //xTaskCreate(&eletronic_injection, "eletronic_injection_task", 2048, NULL, 5, NULL);
 }
