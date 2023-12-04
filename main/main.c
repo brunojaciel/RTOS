@@ -11,8 +11,8 @@
 
 #define TOUCH_THRESH_NO_USE (0)
 #define TOUCHPAD_FILTER_TOUCH_PERIOD (10)
-#define THRESHOLD_OFF 200 // Valor do limiar para desativar
-
+#define THRESHOLD_OFF 200    // Valor do limiar para desativar
+#define FREQUENCIA_CLOCK 160 // MHz
 static const char *TAG = "Touch pad";
 
 static volatile bool s_pad_activated[TOUCH_PAD_MAX];
@@ -29,6 +29,9 @@ uint64_t beginABS, endTimeABS, beginAIR, endTimeAIR;
 uint64_t beginSB, endTimeSB, beginLVT, endTimeLVT;
 uint64_t beginFHL, endTimeFHL, beginPWS, endTimePWS;
 uint64_t beginTDL, endTimeTDL, beginDisplay, endTimeDisplay;
+
+float cyclesEL, cyclesIT, cyclesABS, cyclesAIR, cyclesSB;
+float cyclesLVT, cyclesFHL, cyclesPWS, cyclesTDL, cyclesDisplay;
 
 SemaphoreHandle_t mutex; // Declare a mutex handle
 
@@ -71,7 +74,10 @@ static void thread_display(void *pvParameter)
     while (1)
     {
         xSemaphoreTake(mutex, portMAX_DELAY);
-        beginDisplay = esp_timer_get_time();
+        beginDisplay = xthal_get_ccount();
+        xSemaphoreGive(mutex);
+
+        xSemaphoreTake(mutex, portMAX_DELAY);
         printf("\033[2J\033[1;1H");
         colorful_print("ENGINE: Actuator electronic injection: ", car_system_actuator[0]);
         colorful_print("Actuator internal temperature: ", car_system_actuator[3]);
@@ -81,19 +87,22 @@ static void thread_display(void *pvParameter)
         colorful_print("Front Headlight Light: ", car_system_actuator[7]);
         colorful_print("Power Window System: ", car_system_actuator[8]);
         colorful_print("Two Door Lock: ", car_system_actuator[9]);
-        
-        printf("\nDeadline electronic injection: %llu microseconds\n", (endTimeEL - beginEL));
-        printf("\nDeadline internal temperature: %llu microseconds\n", (endTimeIT - beginIT));
-        printf("\nDeadline ABS: Spent cycles: %llu microseconds\n", (endTimeABS - beginABS));
-        printf("\nDeadline AIRBAG: %llu microseconds\n", (endTimeAIR - beginAIR));
-        printf("\nDeadline seat belt: %llu microseconds\n", (endTimeSB - beginSB));
-        beginLVT = beginPWS + beginSB + beginTDL;
-        endTimeLVT = endTimePWS + endTimeSB + endTimeTDL;
-        printf("\nDeadline LVT: %llu microseconds\n", (endTimeLVT - beginLVT));
-        endTimeDisplay = esp_timer_get_time();
-        printf("\nDeadline Display: %llu microseconds\n", (endTimeDisplay - beginDisplay));
+
+        printf("\nDeadline electronic injection: %.9f microseconds\n", (float)(cyclesEL / FREQUENCIA_CLOCK));
+        printf("\nDeadline internal temperature: %.9f microseconds\n", (float)(cyclesIT / FREQUENCIA_CLOCK));
+        printf("\nDeadline ABS: %.9f microseconds\n", (float)(cyclesABS / FREQUENCIA_CLOCK));
+        printf("\nDeadline AIRBAG: %.9f microseconds\n", (float)(cyclesAIR / FREQUENCIA_CLOCK));
+        printf("\nDeadline seat belt: %.9f microseconds\n", (float)(cyclesSB / FREQUENCIA_CLOCK));
+        printf("\nDeadline LVT: %.9f microseconds\n", (float)((cyclesFHL + cyclesPWS + cyclesTDL) / FREQUENCIA_CLOCK));
+        printf("\nDeadline Display: %.9f milisecond\n", (float)(cyclesDisplay / (FREQUENCIA_CLOCK*1000)));
         xSemaphoreGive(mutex);
+
         vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        xSemaphoreTake(mutex, portMAX_DELAY);
+        endTimeDisplay = xthal_get_ccount();
+        xSemaphoreGive(mutex);
+        cyclesDisplay = (endTimeDisplay - beginDisplay);
     }
 }
 
@@ -103,10 +112,15 @@ void eletronic_injection(void *pvParameter)
     {
         if (s_pad_activated[0] == 1)
         {
-            beginEL = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            beginEL = xthal_get_ccount();
+            xSemaphoreGive(mutex);
             read_sensor(0);
             execute_actuator(0);
-            endTimeEL = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            endTimeEL = xthal_get_ccount();
+            xSemaphoreGive(mutex);
+            cyclesEL = (endTimeEL - beginEL);
         }
         else
         {
@@ -115,8 +129,7 @@ void eletronic_injection(void *pvParameter)
             xSemaphoreGive(mutex);
         }
         vTaskDelay(0.5 / portTICK_PERIOD_MS);
-        //Time of cable
-        vTaskDelay(0.016 / portTICK_PERIOD_MS);
+        vTaskDelay(0.016 / portTICK_PERIOD_MS); // Time of cable
     }
 }
 
@@ -124,13 +137,17 @@ void internal_temperature(void *pvParameter)
 {
     while (1)
     {
-        
         if (s_pad_activated[3] == 1)
         {
-            beginIT = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            beginIT = xthal_get_ccount();
+            xSemaphoreGive(mutex);
             read_sensor(3);
             execute_actuator(3);
-            endTimeIT = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            endTimeIT = xthal_get_ccount();
+            xSemaphoreGive(mutex);
+            cyclesIT = (endTimeIT - beginIT);
         }
         else
         {
@@ -139,8 +156,7 @@ void internal_temperature(void *pvParameter)
             xSemaphoreGive(mutex);
         }
         vTaskDelay(20 / portTICK_PERIOD_MS);
-        //Time of cable
-        vTaskDelay(0.016 / portTICK_PERIOD_MS);
+        vTaskDelay(0.016 / portTICK_PERIOD_MS); // Time of cable
     }
 }
 
@@ -148,12 +164,18 @@ void abs_brake(void *pvParameter)
 {
     while (1)
     {
+
         if (s_pad_activated[4] == 1)
         {
-            beginABS = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            beginABS = xthal_get_ccount();
+            xSemaphoreGive(mutex);
             read_sensor(4);
             execute_actuator(4);
-            endTimeABS = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            endTimeABS = xthal_get_ccount();
+            xSemaphoreGive(mutex);
+            cyclesABS = endTimeABS - beginABS;
         }
         else
         {
@@ -162,8 +184,7 @@ void abs_brake(void *pvParameter)
             xSemaphoreGive(mutex);
         }
         vTaskDelay(100 / portTICK_PERIOD_MS);
-        //Time of cable
-        vTaskDelay(0.016 / portTICK_PERIOD_MS);
+        vTaskDelay(0.016 / portTICK_PERIOD_MS); // Time of cable
     }
 }
 
@@ -171,12 +192,18 @@ void airbag(void *pvParameter)
 {
     while (1)
     {
+
         if (s_pad_activated[5] == 1)
         {
-            beginAIR = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            beginAIR = xthal_get_ccount();
+            xSemaphoreGive(mutex);
             read_sensor(5);
             execute_actuator(5);
-            endTimeAIR = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            endTimeAIR = xthal_get_ccount();
+            xSemaphoreGive(mutex);
+            cyclesAIR = endTimeAIR - beginAIR;
         }
         else
         {
@@ -185,8 +212,7 @@ void airbag(void *pvParameter)
             xSemaphoreGive(mutex);
         }
         vTaskDelay(100 / portTICK_PERIOD_MS);
-        //Time of cable
-        vTaskDelay(0.016 / portTICK_PERIOD_MS);
+        vTaskDelay(0.016 / portTICK_PERIOD_MS); // Time of cable
     }
 }
 
@@ -194,12 +220,18 @@ void seat_belt(void *pvParameter)
 {
     while (1)
     {
+
         if (s_pad_activated[6] == 1)
         {
-            beginSB = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            beginSB = xthal_get_ccount();
+            xSemaphoreGive(mutex);
             read_sensor(6);
             execute_actuator(6);
-            endTimeSB = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            endTimeSB = xthal_get_ccount();
+            xSemaphoreGive(mutex);
+            cyclesSB = endTimeSB - beginSB;
         }
         else
         {
@@ -208,8 +240,7 @@ void seat_belt(void *pvParameter)
             xSemaphoreGive(mutex);
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        //Time of cable
-        vTaskDelay(0.016 / portTICK_PERIOD_MS);
+        vTaskDelay(0.016 / portTICK_PERIOD_MS); // Time of cable
     }
 }
 
@@ -217,12 +248,18 @@ void front_headlight_light(void *pvParameter)
 {
     while (1)
     {
+
         if (s_pad_activated[7] == 1)
         {
-            beginFHL = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            beginFHL = xthal_get_ccount();
+            xSemaphoreGive(mutex);
             read_sensor(7);
             execute_actuator(7);
-            endTimeFHL = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            endTimeFHL = xthal_get_ccount();
+            xSemaphoreGive(mutex);
+            cyclesFHL = endTimeFHL - beginFHL;
         }
         else
         {
@@ -231,8 +268,7 @@ void front_headlight_light(void *pvParameter)
             xSemaphoreGive(mutex);
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        //Time of cable
-        vTaskDelay(0.016 / portTICK_PERIOD_MS);
+        vTaskDelay(0.016 / portTICK_PERIOD_MS); // Time of cable
     }
 }
 
@@ -240,12 +276,18 @@ void power_window_system(void *pvParameter)
 {
     while (1)
     {
+
         if (s_pad_activated[8] == 1)
         {
-            beginPWS = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            beginPWS = xthal_get_ccount();
+            xSemaphoreGive(mutex);
             read_sensor(8);
             execute_actuator(8);
-            endTimePWS = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            endTimePWS = xthal_get_ccount();
+            xSemaphoreGive(mutex);
+            cyclesPWS = endTimePWS - beginPWS;
         }
         else
         {
@@ -254,8 +296,7 @@ void power_window_system(void *pvParameter)
             xSemaphoreGive(mutex);
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        //Time of cable
-        vTaskDelay(0.016 / portTICK_PERIOD_MS);
+        vTaskDelay(0.016 / portTICK_PERIOD_MS); // Time of cable
     }
 }
 
@@ -263,12 +304,18 @@ void two_door_lock(void *pvParameter)
 {
     while (1)
     {
+
         if (s_pad_activated[9] == 1)
         {
-            beginTDL = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            beginTDL = xthal_get_ccount();
+            xSemaphoreGive(mutex);
             read_sensor(9);
             execute_actuator(9);
-            endTimeTDL = esp_timer_get_time();
+            xSemaphoreTake(mutex, portMAX_DELAY);
+            endTimeTDL = xthal_get_ccount();
+            xSemaphoreGive(mutex);
+            cyclesTDL = endTimeTDL - beginTDL;
         }
         else
         {
@@ -277,8 +324,7 @@ void two_door_lock(void *pvParameter)
             xSemaphoreGive(mutex);
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        //Time of cable
-        vTaskDelay(0.016 / portTICK_PERIOD_MS);
+        vTaskDelay(0.016 / portTICK_PERIOD_MS); // Time of cable
     }
 }
 
@@ -356,7 +402,7 @@ void app_main(void)
     touch_pad_intr_enable();
     // Create a mutex
     mutex = xSemaphoreCreateMutex();
-
+    //vSemaphoreCreateBinary(mutex);
     // Start tasks to read values sensed by pads
     xTaskCreate(&eletronic_injection, "eletronic_injection_task", 2048, NULL, 7, NULL);
     xTaskCreate(&internal_temperature, "internal_temperature_task", 2048, NULL, 6, NULL);
@@ -368,4 +414,7 @@ void app_main(void)
     xTaskCreate(&front_headlight_light, "front_headlight_light_task", 2048, NULL, 2, NULL);
     // Start tasks to print values sensed by pads
     xTaskCreate(&thread_display, "display_task", 2048, NULL, 1, NULL);
+
+    //vTaskStartScheduler();
+    //while (1);
 }
