@@ -3,5 +3,8 @@
   "idf.flashType": "UART",
   "idf.portWin": "COM9",
   "idf.adapterTargetName": "esp32",
-  "idf.port": "/dev/cu.usbserial-567F0313171"
+  "idf.port": "/dev/cu.usbserial-567F0313171",
+  "files.associations": {
+    "rtc_periph.h": "c"
+  }
 }
