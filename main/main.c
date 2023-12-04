@@ -97,12 +97,12 @@ static void thread_display(void *pvParameter)
         printf("\nDeadline Display: %.9f milisecond\n", (float)(cyclesDisplay / (FREQUENCIA_CLOCK*1000)));
         xSemaphoreGive(mutex);
 
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-
         xSemaphoreTake(mutex, portMAX_DELAY);
         endTimeDisplay = xthal_get_ccount();
         xSemaphoreGive(mutex);
         cyclesDisplay = (endTimeDisplay - beginDisplay);
+
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 
